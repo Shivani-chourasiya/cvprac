@@ -62,7 +62,8 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from cvprac.cvp_client import CvpClient
-from cvprac.cvp_client_errors import CvpApiError
+from cvprac.cvp_client_errors import CvpApiError, CvpRequestError
+from parameterized import parameterized
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
 from systestlib import DutSystemTest
@@ -2386,8 +2387,8 @@ class TestCvpClient(DutSystemTest):
             (task_id, _) = self._create_task()
             print('tasks...', [task_id])
             chg_ctrl = self.api.change_control_create_for_tasks(
-                chg_ctrl_name, chg_ctrl_name, [task_id])
-            print('Change control resp', chg_ctrl)
+                cc_id, chg_ctrl_name, [task_id])
+            ccid = chg_ctrl['value']['key']['id']
             # cc_id = ''
             # if len(chg_ctrl) > 0:
             #     if 'id' in chg_ctrl[0]:
@@ -2401,6 +2402,114 @@ class TestCvpClient(DutSystemTest):
             #     print('')
             #     print(chg_ctrl_pending)
             #     print('')
+
+            # Approve the change control
+            approve_note = "Approving CC via cvprac"
+            approve_chg_ctrl = self.api.change_control_approve(cc_id, notes=approve_note)
+            print('Approve chg ctrl rep', approve_chg_ctrl)
+            assert approve_chg_ctrl is not None
+            print(approve_chg_ctrl['value']['approve']['value'])
+            assert approve_chg_ctrl['value']['approve']['value'] is True
+
+            # Start the chnage control
+            start_note = "Start the CC via cvprac"
+            start_chg_ctrl = self.api.change_control_start(cc_id, notes=start_note)
+            print('Start change control resp', start_chg_ctrl)
+            assert start_chg_ctrl is not None
+            assert start_chg_ctrl['value']['start']['value'] is True
+
+        else:
+            pprint('SKIPPING TEST FOR API - {0}'.format(
+                self.clnt.apiversion))
+            time.sleep(1)
+
+    # @parameterized.expand(['333'])
+    def test_api_change_control_create_for_empty_tasks_list(self):
+        ''' Verify create_change_control_v3
+        '''
+        # Set client apiversion if it is not already set
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion > 3.0:
+            obj = TestCvpClient()
+            cc_id = str(uuid.uuid4())
+            pprint('RUN TEST FOR V3 CHANGE CONTROL APIs')
+            chg_ctrl_name = 'test_api_%d' % time.time()
+            with self.assertRaises(CvpRequestError):
+                chg_ctrl = self.api.change_control_create_for_tasks(
+                    cc_id, chg_ctrl_name, [], series=False)
+        else:
+            pprint('SKIPPING TEST FOR API - {0}'.format(
+                self.clnt.apiversion))
+            time.sleep(1)
+
+    def test_api_change_control_create_for_none_task_id_in_list(self):
+        ''' Verify create_change_control_v3
+        '''
+        # Set client apiversion if it is not already set
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion > 3.0:
+            obj = TestCvpClient()
+            cc_id = str(uuid.uuid4())
+            pprint('RUN TEST FOR V3 CHANGE CONTROL APIs')
+            chg_ctrl_name = 'test_api_%d' % time.time()
+            with self.assertRaises(CvpRequestError):
+                chg_ctrl = self.api.change_control_create_for_tasks(
+                    cc_id, chg_ctrl_name, [None], series=False)
+        else:
+            pprint('SKIPPING TEST FOR API - {0}'.format(
+                self.clnt.apiversion))
+            time.sleep(1)
+
+    def test_api_change_control_create_for_none_task_ids_not_list(self):
+        ''' Verify create_change_control_v3
+        '''
+        # Set client apiversion if it is not already set
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion > 3.0:
+            obj = TestCvpClient()
+            cc_id = str(uuid.uuid4())
+            pprint('RUN TEST FOR V3 CHANGE CONTROL APIs')
+            chg_ctrl_name = 'test_api_%d' % time.time()
+            with self.assertRaises(TypeError):
+                chg_ctrl = self.api.change_control_create_for_tasks(
+                    cc_id, chg_ctrl_name, None, series=False)
+        else:
+            pprint('SKIPPING TEST FOR API - {0}'.format(
+                self.clnt.apiversion))
+            time.sleep(1)
+
+    def test_api_change_control_create_for_random_task_id(self):
+        ''' Verify create_change_control_v3
+        '''
+        # Set client apiversion if it is not already set
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion > 3.0:
+            random_task_id = '3333'
+            cc_id = str(uuid.uuid4())
+            pprint('RUN TEST FOR V3 CHANGE CONTROL APIs')
+            chg_ctrl_name = 'test_api_%d' % time.time()
+            # with self.assertRaises(CvpRequestError):
+            chg_ctrl = self.api.change_control_create_for_tasks(
+                cc_id, chg_ctrl_name, [random_task_id], series=False)
+            print('Change control resp', chg_ctrl)
+
+            # Approve the change control
+            '''
+            Issue - Approve CC succeded for random task_id without creating a task
+            # but on CVP UI approve button is not enale and it gives msg No congn or image 
+            difference to show. Ideally API should also fail.
+            '''
+            approve_note = "Approving CC via cvprac"
+            approve_chg_ctrl = self.api.change_control_approve(cc_id, notes=approve_note)
+            print('Approve chg ctrl rep', approve_chg_ctrl)
+            assert approve_chg_ctrl is not None
+            print(approve_chg_ctrl['value']['approve']['value'])
+            assert approve_chg_ctrl['value']['approve']['value'] is True
+
         else:
             pprint('SKIPPING TEST FOR API - {0}'.format(
                 self.clnt.apiversion))
